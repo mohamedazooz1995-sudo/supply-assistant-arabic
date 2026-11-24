@@ -15,12 +15,28 @@ def t(a, e):
     return a if ar else e
 
 
+direction = "rtl" if ar else "ltr"
+alignment = "right" if ar else "left"
 st.markdown(
-    "<style>.stMain{direction:"
-    + ("rtl" if ar else "ltr")
-    + ";text-align:"
-    + ("right" if ar else "left")
-    + '} .block-container{max-width:1000px;padding-top:2rem} h1{font-size:2rem!important} p{overflow-wrap:anywhere} .stApp{background:#F6F3FB;color:#1B1030} h1,h2,h3{color:#5B2C8F!important} div[data-testid="stMetric"]{border-top:3px solid #5B2C8F} button:hover{border-color:#5B2C8F!important} div[data-testid="stMetric"]{background:#F1E8FB;padding:16px;border-radius:8px} button{min-height:44px!important} </style>',
+    f"""<style>
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{background:#F6F3FB;color:#1B1030;color-scheme:light;}}
+.block-container {{max-width:1000px;padding-top:2rem;}}
+.stMain, [data-testid="stMarkdownContainer"], [data-testid="stWidgetLabel"], h1,h2,h3 {{direction:{direction};text-align:{alignment};}}
+[data-testid="stMarkdownContainer"] p, [data-testid="stWidgetLabel"] p, label, h1,h2,h3 {{color:#1B1030!important;overflow-wrap:anywhere;}}
+h1,h2,h3 {{color:#5B2C8F!important;}} h1 {{font-size:2rem!important;}}
+[data-testid="stCaptionContainer"] p {{color:#554766!important;direction:{direction};text-align:{alignment};}}
+[data-testid="stMetric"] {{background:#F1E8FB;padding:16px;border-radius:8px;border-top:3px solid #5B2C8F;direction:{direction};text-align:{alignment};}}
+[data-testid="stMetric"] * {{color:#28133F!important;}}
+[data-testid="stMetricValue"] {{direction:ltr;unicode-bidi:isolate;}}
+[data-baseweb="select"] > div, [data-baseweb="input"], input, [data-testid="stNumberInputContainer"] {{background:#FFFFFF!important;color:#1B1030!important;}}
+[data-baseweb="select"] span, [data-baseweb="select"] input, input {{color:#1B1030!important;-webkit-text-fill-color:#1B1030!important;}}
+[data-baseweb="select"], [data-testid="stRadioGroup"], [data-testid="stExpander"] summary {{direction:{direction};text-align:{alignment};}}
+[data-baseweb="popover"] *, [role="listbox"], [role="option"] {{background:#FFFFFF!important;color:#1B1030!important;}}
+[data-testid="stNumberInput"] input {{direction:ltr;text-align:center;}}
+button {{min-height:44px!important;}} [data-testid="stBaseButton-secondary"] {{background:#FFFFFF;color:#5B2C8F;}}
+[data-testid="stExpander"] {{border-color:#CDBDE2;}} code, pre {{direction:ltr;text-align:left;}}
+[data-testid="stAlert"] {{background:#E8E0F5;color:#1B1030;}}
+</style>""",
     unsafe_allow_html=True,
 )
 # Use the checked workbook snapshot. This app does not recalculate Excel formulas.
@@ -108,6 +124,107 @@ def explain(i):
         )
 
 
+def calculate_scenario(item, stock, on_order):
+    """Match Analysis!AC:AG and AI; keep demand-policy inputs unchanged."""
+    result = dict(item)
+    position = stock + on_order
+    status = (
+        "CHECK"
+        if stock < 0
+        else (
+            "REORDER"
+            if position < item["rop"]
+            else "OVERSTOCK" if stock > item["max"] else "OK"
+        )
+    )
+    quantity = max(0, item["max"] - position) if status == "REORDER" else 0
+    result.update(
+        stock=stock,
+        onOrder=on_order,
+        position=position,
+        status=status,
+        suggested=quantity,
+        order_value=quantity * item["price"],
+        excess_value=max(0, stock - item["max"]) * item["price"],
+        cover=stock / item["forecast"] if item["forecast"] > 0 else None,
+    )
+    return result
+
+
+def scenario_editor(item):
+    st.subheader(t("تجربة كميات جديدة", "Quantity scenario"))
+    st.info(
+        t(
+            "التعديلات تجربة خاصة بجلستك فقط. لا تغيّر Excel أو بيانات الزوار الآخرين، وليست أمر شراء.",
+            "Trial changes belong only to this session. They do not change Excel or other visitors' data and do not place orders.",
+        )
+    )
+    st.write(
+        t(
+            "اختر الصنف بالأعلى، ثم عدّل الرصيد أو الطلبات المفتوحة. اضغط Enter أو اخرج من الحقل لتحديث النتيجة.",
+            "Choose an item above, then edit stock or open orders. Press Enter or leave the field to update the result.",
+        )
+    )
+    key = "trial_" + item["code"]
+    if st.button(
+        t("استرجاع كميات الملف لهذا الصنف", "Reset this item to workbook quantities")
+    ):
+        st.session_state.pop(key + "_stock", None)
+        st.session_state.pop(key + "_orders", None)
+        st.rerun()
+    stock = st.number_input(
+        t("رصيد المخزن التجريبي", "Trial stock on hand"),
+        value=float(item["stock"]),
+        step=1.0,
+        key=key + "_stock",
+    )
+    orders = st.number_input(
+        t("الطلبات المفتوحة التجريبية", "Trial open orders"),
+        min_value=0.0,
+        value=float(item["onOrder"]),
+        step=1.0,
+        key=key + "_orders",
+    )
+    result = calculate_scenario(item, stock, orders)
+    st.caption(
+        t(
+            "الثابت من الملف: التنبؤ ومخزون الأمان ونقطة إعادة الطلب وEOQ والحد الأقصى وسعر الوحدة. لا يُعاد حساب التنبؤ عند تغيير الرصيد.",
+            "Fixed workbook inputs: forecast, safety stock, reorder point, EOQ, maximum level and unit cost. Stock edits do not recalculate the forecast.",
+        )
+    )
+    st.write(
+        t("مقارنة بالملف: ", "Workbook baseline: ")
+        + t("الرصيد ", "stock ")
+        + n(item["stock"])
+        + " | "
+        + t("طلبات مفتوحة ", "open orders ")
+        + n(item["onOrder"])
+    )
+    st.success(
+        t(
+            "نتيجة السيناريو المعاد حسابها أدناه، وليست القيم الأصلية المخزنة في الشيت.",
+            "Recalculated scenario results below, not the original stored sheet values.",
+        )
+    )
+    explain(result)
+    st.write(
+        t("قيمة الطلب المقترح: ", "Suggested order value: ")
+        + n(result["order_value"])
+        + " EGP"
+    )
+    st.write(t("قيمة الزيادة: ", "Excess value: ") + n(result["excess_value"]) + " EGP")
+    st.write(
+        t("تغطية المخزون بالشهور: ", "Months of stock cover: ")
+        + (n(result["cover"]) if result["cover"] is not None else t("غير متاحة", "N/A"))
+    )
+    st.caption(
+        t(
+            "قواعد التحليل: المركز = الرصيد + الطلبات المفتوحة؛ CHECK للرصيد السالب، ثم REORDER لو المركز أقل من نقطة الطلب، ثم OVERSTOCK لو الرصيد فوق الحد الأقصى، وإلا OK. كمية الطلب = الحد الأقصى ناقص المركز فقط عند REORDER.",
+            "Rules: position = stock + open orders; CHECK for negative stock, then REORDER below reorder point, then OVERSTOCK above maximum, otherwise OK. Suggested quantity = maximum minus position only for REORDER.",
+        )
+    )
+
+
 st.image(
     io.BytesIO(
         base64.b64decode(
@@ -150,9 +267,10 @@ for col, value, label in zip(
     ],
 ):
     col.metric(label, value)
-options = ["summary", "reorder", "excess", "item"]
+options = ["summary", "scenario", "reorder", "excess", "item"]
 labels = [
     t("ملخص", "Summary"),
+    t("جرّب تغيير الكميات", "Try quantity changes"),
     t("المحتاج طلب", "Reorder review"),
     t("المخزون الزائد", "Excess stock"),
     t("شرح صنف", "Item explanation"),
@@ -201,6 +319,8 @@ if mode == "summary":
         )
     )
     st.caption("Dashboard!B8:B9 | Analysis!AE5:AE69")
+elif mode == "scenario":
+    scenario_editor(by_code[code])
 elif mode == "item":
     explain(by_code[code])
 elif mode == "unsupported":
@@ -226,8 +346,8 @@ else:
 with st.expander(t("حدود النسخة ومصدر البيانات", "Limitations and data source")):
     st.write(
         t(
-            "لقطة ثابتة من نتائج الملف المستلم في 24 نوفمبر 2026. مش اتصال مباشر بـ Excel، ومش إعادة حساب للتنبؤ. تعديل الملف لا يحدّث التطبيق تلقائيًا.",
-            "Fixed snapshot of stored results from the workbook received on 24 November 2026. No live Excel connection or forecast recalculation. Workbook edits do not update this app automatically.",
+            "لقطة ثابتة من نتائج الملف المستلم في 24 نوفمبر 2026. مش اتصال مباشر بـ Excel، ومش إعادة حساب للتنبؤ. تجربة الكميات تعيد حساب نتائج سياسة المخزون فقط. تعديل الملف لا يحدّث التطبيق تلقائيًا.",
+            "Fixed snapshot of stored results from the workbook received on 24 November 2026. No live Excel connection or forecast recalculation. The scenario view recalculates stock-policy outputs only. Workbook edits do not update this app automatically.",
         )
     )
     st.write(
