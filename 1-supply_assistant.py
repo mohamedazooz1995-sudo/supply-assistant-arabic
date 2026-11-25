@@ -775,6 +775,8 @@ elif mode == "sheet":
     with pd.ExcelWriter(tbuf, engine="xlsxwriter") as writer:
         tdf.to_excel(writer, index=False, sheet_name="Items")
         ws = writer.sheets["Items"]
+        for idx, width in enumerate([8, 34, 30, 7, 10, 14, 12, 14, 11, 7, 7, 9, 9, 11, 9]):
+            ws.set_column(idx, idx, width)
         status_col = len(tdf.columns) - 1
         ws.data_validation(
             1, status_col, 500, status_col,
