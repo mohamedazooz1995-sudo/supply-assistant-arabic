@@ -298,13 +298,63 @@ def sheet_export_df(rows):
     )
 
 
-def parse_uploaded_sheet(df):
+def check_columns(df):
     missing = [c for c in SHEET_INPUT_COLUMNS if c not in df.columns]
     if missing:
-        return None, t(
-            "أعمدة ناقصة: " + "، ".join(missing) + ". حمّل الشيت الحالي وعدّل عليه بنفس الأعمدة.",
-            "Missing columns: " + ", ".join(missing) + ". Download the current sheet and edit it with the same columns.",
+        return t(
+            "أعمدة ناقصة: " + "، ".join(missing) + ". حمّل الشيت الحالي أو القالب وعدّل عليه بنفس الأعمدة.",
+            "Missing columns: " + ", ".join(missing) + ". Download the current sheet or the template and edit it with the same columns.",
         )
+    return None
+
+
+def row_to_item(r, pos, digits):
+    code = cell_text(r["Code"]).translate(digits)
+    if not code:
+        return None, t(
+            f"صف رقم {pos}: الكود فاضي.",
+            f"Row {pos}: the code is empty.",
+        )
+    vals = {}
+    bad = []
+    for c in SHEET_NUMERIC_COLUMNS:
+        raw = cell_text(r[c]).replace(",", "").translate(digits)
+        try:
+            vals[c] = float(raw)
+        except ValueError:
+            bad.append(c)
+    if bad:
+        return None, t(
+            f"صف رقم {pos} ({code}): قيم مش رقمية في " + "، ".join(bad),
+            f"Row {pos} ({code}): non-numeric values in " + ", ".join(bad),
+        )
+    name_en = cell_text(r["Item"])
+    return {
+        "row": pos,
+        "code": code,
+        "name": name_en,
+        "description": cell_text(r["Description"]) or name_en,
+        "unit": cell_text(r["Unit"]) or "PCS",
+        "supplier": cell_text(r["Supplier"]),
+        "price": vals["Unit price (EGP)"],
+        "annual": vals["Annual usage"],
+        "forecast": vals["Monthly forecast"],
+        "safety": vals["Safety stock"],
+        "rop": vals["ROP"],
+        "eoq": vals["EOQ"],
+        "max": vals["Max"],
+        "stock": vals["On hand"],
+        "onOrder": vals["Open orders"],
+        "method": "Exp. smoothing",
+        "mape": 0.0,
+        "class": "",
+    }, None
+
+
+def parse_uploaded_sheet(df):
+    problem = check_columns(df)
+    if problem:
+        return None, problem
     if len(df) == 0:
         return None, t("الملف مفيهوش صفوف أصناف.", "The file has no item rows.")
     if len(df) > 500:
@@ -312,46 +362,9 @@ def parse_uploaded_sheet(df):
     digits = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
     out = []
     for pos, (_, r) in enumerate(df.iterrows(), 1):
-        code = cell_text(r["Code"]).translate(digits)
-        if not code:
-            return None, t(
-                f"صف رقم {pos}: الكود فاضي.",
-                f"Row {pos}: the code is empty.",
-            )
-        vals = {}
-        bad = []
-        for c in SHEET_NUMERIC_COLUMNS:
-            raw = cell_text(r[c]).replace(",", "").translate(digits)
-            try:
-                vals[c] = float(raw)
-            except ValueError:
-                bad.append(c)
-        if bad:
-            return None, t(
-                f"صف رقم {pos} ({code}): قيم مش رقمية في " + "، ".join(bad),
-                f"Row {pos} ({code}): non-numeric values in " + ", ".join(bad),
-            )
-        name_en = cell_text(r["Item"])
-        item = {
-            "row": pos,
-            "code": code,
-            "name": name_en,
-            "description": cell_text(r["Description"]) or name_en,
-            "unit": cell_text(r["Unit"]) or "PCS",
-            "supplier": cell_text(r["Supplier"]),
-            "price": vals["Unit price (EGP)"],
-            "annual": vals["Annual usage"],
-            "forecast": vals["Monthly forecast"],
-            "safety": vals["Safety stock"],
-            "rop": vals["ROP"],
-            "eoq": vals["EOQ"],
-            "max": vals["Max"],
-            "stock": vals["On hand"],
-            "onOrder": vals["Open orders"],
-            "method": "Exp. smoothing",
-            "mape": 0.0,
-            "class": "",
-        }
+        item, problem = row_to_item(r, pos, digits)
+        if problem:
+            return None, problem
         out.append(calculate_scenario(item, item["stock"], item["onOrder"]))
     codes = [i["code"] for i in out]
     if len(set(codes)) != len(codes):
@@ -360,6 +373,84 @@ def parse_uploaded_sheet(df):
             "Duplicate codes in the sheet. Every item needs a unique code.",
         )
     return out, None
+
+
+def merge_changes_sheet(df, existing):
+    problem = check_columns(df)
+    if problem:
+        return None, problem
+    digits = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+    existing_codes = {e["code"] for e in existing}
+    updates = {}
+    adds = []
+    seen = set()
+    changed = 0
+    for pos, (_, r) in enumerate(df.iterrows(), 1):
+        code = cell_text(r["Code"]).translate(digits)
+        action = cell_text(r["status"]).lower()
+        if not code and not action:
+            continue
+        changed += 1
+        if not code:
+            return None, t(
+                f"صف رقم {pos}: الكود فاضي.",
+                f"Row {pos}: the code is empty.",
+            )
+        if action not in ("add", "update"):
+            return None, t(
+                f"صف رقم {pos} ({code}): اختار Add أو Update في عمود status.",
+                f"Row {pos} ({code}): choose Add or Update in the status column.",
+            )
+        if code in seen:
+            return None, t(
+                f"الكود {code} متكرر في الملف.",
+                f"Code {code} appears twice in the file.",
+            )
+        seen.add(code)
+        item, problem = row_to_item(r, pos, digits)
+        if problem:
+            return None, problem
+        if action == "add":
+            if code in existing_codes:
+                return None, t(
+                    f"صف رقم {pos} ({code}): الكود موجود بالفعل. استخدم Update بدل Add.",
+                    f"Row {pos} ({code}): this code already exists. Use Update instead of Add.",
+                )
+            adds.append(item)
+        else:
+            if code not in existing_codes:
+                return None, t(
+                    f"صف رقم {pos} ({code}): الكود مش موجود عشان تعمله Update. استخدم Add أو صحّح الكود.",
+                    f"Row {pos} ({code}): no item with this code to update. Use Add or fix the code.",
+                )
+            updates[code] = item
+    if changed == 0:
+        return None, t(
+            "الملف مفيهوش صفوف فيها Add أو Update.",
+            "The file has no rows marked Add or Update.",
+        )
+    merged = []
+    for e in existing:
+        if e["code"] in updates:
+            u = updates[e["code"]]
+            u["row"] = e["row"]
+            merged.append(calculate_scenario(u, u["stock"], u["onOrder"]))
+        else:
+            merged.append(e)
+    next_row = max((e["row"] for e in existing), default=0)
+    for a in adds:
+        next_row += 1
+        a["row"] = next_row
+        merged.append(calculate_scenario(a, a["stock"], a["onOrder"]))
+    return merged, None
+
+
+def template_df(rows):
+    d = sheet_export_df(rows).drop(
+        columns=["Row", "Net position", "Status", "Suggested qty", "MAPE"]
+    )
+    d["status"] = ""
+    return d
 
 
 def handle_upload():
@@ -377,7 +468,13 @@ def handle_upload():
             "Could not read the file. Make sure it is a valid Excel or CSV file.",
         )
         return
-    new_items, problem = parse_uploaded_sheet(df_up)
+    if "status" in df_up.columns:
+        base = st.session_state.get("custom_items") or json.loads(
+            (Path(__file__).parent / "2-data.json").read_text(encoding="utf-8")
+        )["items"]
+        new_items, problem = merge_changes_sheet(df_up, base)
+    else:
+        new_items, problem = parse_uploaded_sheet(df_up)
     if problem:
         st.session_state["upload_error"] = problem
     else:
@@ -673,6 +770,22 @@ elif mode == "sheet":
         file_name="supply-items.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+    tbuf = io.BytesIO()
+    tdf = template_df(items)
+    with pd.ExcelWriter(tbuf, engine="xlsxwriter") as writer:
+        tdf.to_excel(writer, index=False, sheet_name="Items")
+        ws = writer.sheets["Items"]
+        status_col = len(tdf.columns) - 1
+        ws.data_validation(
+            1, status_col, 500, status_col,
+            {"validate": "list", "source": ["Add", "Update"]},
+        )
+    st.download_button(
+        t("تحميل قالب الإضافة والتعديل (Excel)", "Download the add/update template (Excel)"),
+        tbuf.getvalue(),
+        file_name="supply-items-template.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
     if st.session_state.get("custom_items"):
         st.info(
             t(
@@ -687,8 +800,8 @@ elif mode == "sheet":
     with st.expander(t("تحديث البيانات من شيت", "Update the data from a sheet")):
         st.write(
             t(
-                "ارفع ملف Excel أو CSV بنفس أعمدة الشيت المحمّل. الحالة والكمية المقترحة بتتحسب تلقائيًا من الرصيد والطلبات المفتوحة بنفس قواعد الملف. التحديث مؤقت وخاص بجلستك فقط.",
-                "Upload an Excel or CSV file with the same columns as the downloaded sheet. Status and suggested quantity are recalculated from stock and open orders using the same workbook rules. The update is temporary and only affects your session.",
+                "طريقتين: ارفع الشيت الحالي بعد تعديله لاستبدال البيانات كلها، أو استخدم قالب الإضافة والتعديل: عمود status فيه Add لصنف جديد أو Update لتعديل صنف موجود بكوده، وباقي الأصناف تفضل زي ما هي. حالة المخزون والكمية المقترحة بتتحسب تلقائيًا من الرصيد والطلبات المفتوحة بنفس قواعد الملف. التحديث مؤقت وخاص بجلستك فقط.",
+                "Two ways: upload the edited current sheet to replace all data, or use the add/update template: a status column with Add for a new item or Update to change an existing item by its code, leaving every other item untouched. Stock status and suggested quantity are recalculated from stock and open orders using the same workbook rules. The update is temporary and only affects your session.",
             )
         )
         st.caption(t("الأعمدة المطلوبة: ", "Required columns: ") + ", ".join(SHEET_INPUT_COLUMNS))
