@@ -185,9 +185,144 @@ hr {{border-color:#E2D8F0;}}
 [data-testid="stExpander"] summary[aria-expanded="true"] {{background:#F8F5FC!important;}}
 [data-testid="stExpander"] summary p, [data-testid="stExpander"] summary span {{color:#3A1163!important;-webkit-text-fill-color:#3A1163!important;}}
 [data-testid="stExpander"] summary svg {{fill:#5E2399!important;color:#5E2399!important;}}
+
+/* entrance & motion pack v2 */
+@keyframes riseIn {{from {{opacity:0;transform:translateY(12px);}} to {{opacity:1;transform:translateY(0);}}}}
+@keyframes popIn {{0% {{opacity:0;transform:scale(.92);}} 60% {{opacity:1;transform:scale(1.02);}} 100% {{opacity:1;transform:scale(1);}}}}
+@keyframes barGrow {{from {{transform:scaleY(0);}} to {{transform:scaleY(1);}}}}
+@keyframes glowDrift {{from {{transform:translate(0,0) scale(1);}} to {{transform:translate(-46px,34px) scale(1.18);}}}}
+@keyframes sheenSweep {{0% {{left:-70%;}} 100% {{left:170%;}}}}
+@keyframes chartWipe {{from {{clip-path:inset(100% 0 0 0);opacity:.4;}} to {{clip-path:inset(0 0 0 0);opacity:1;}}}}
+@keyframes pillPulse {{0%,100% {{box-shadow:0 0 0 0 rgba(109,45,176,.45);}} 50% {{box-shadow:0 0 0 7px rgba(109,45,176,0);}}}}
+@keyframes tabPop {{0% {{transform:scale(.85);}} 60% {{transform:scale(1.06);}} 100% {{transform:scale(1);}}}}
+
+/* hero entrance + ambient motion */
+.hero {{animation:riseIn .6s cubic-bezier(.2,.7,.3,1) both;}}
+.hero::before {{animation:glowDrift 9s ease-in-out infinite alternate;}}
+.brand {{animation:riseIn .55s .1s both;}}
+.brand .logo {{animation:popIn .6s .15s both;}}
+.hint {{animation:riseIn .55s .22s both;}}
+.brand::after {{content:"";position:absolute;top:0;bottom:0;left:-70%;width:60%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.18),transparent);
+  animation:sheenSweep 6s ease-in-out 1.4s infinite;}}
+.q {{animation:riseIn .55s both;}}
+.q:nth-of-type(1) {{animation-delay:.26s;}}
+.q:nth-of-type(2) {{animation-delay:.38s;}}
+.q:nth-of-type(3) {{animation-delay:.5s;}}
+
+/* staggered section entrances (top-level blocks) */
+[data-testid="stMainBlockContainer"] > div > [data-testid="stElementContainer"] {{animation:riseIn .5s cubic-bezier(.2,.7,.3,1) both;}}
+[data-testid="stMainBlockContainer"] > div > [data-testid="stElementContainer"]:nth-child(2) {{animation-delay:.05s;}}
+[data-testid="stMainBlockContainer"] > div > [data-testid="stElementContainer"]:nth-child(3) {{animation-delay:.10s;}}
+[data-testid="stMainBlockContainer"] > div > [data-testid="stElementContainer"]:nth-child(4) {{animation-delay:.15s;}}
+[data-testid="stMainBlockContainer"] > div > [data-testid="stElementContainer"]:nth-child(5) {{animation-delay:.20s;}}
+[data-testid="stMainBlockContainer"] > div > [data-testid="stElementContainer"]:nth-child(6) {{animation-delay:.25s;}}
+[data-testid="stMainBlockContainer"] > div > [data-testid="stElementContainer"]:nth-child(7) {{animation-delay:.30s;}}
+[data-testid="stMainBlockContainer"] > div > [data-testid="stElementContainer"]:nth-child(n+8) {{animation-delay:.35s;}}
+
+/* selected nav tab pops on switch */
+[data-testid="stRadioOption"][data-selected="true"] {{animation:tabPop .35s cubic-bezier(.2,.7,.3,1);}}
+
+/* KPI cards pop + accent bar grow + one-time sheen, staggered per column */
+[data-testid="stMetric"] {{animation:popIn .5s cubic-bezier(.2,.7,.3,1) both;}}
+[data-testid="stMetric"]::before {{transform-origin:top;animation:barGrow .6s .25s cubic-bezier(.2,.7,.3,1) both;}}
+[data-testid="stMetric"]::after {{content:"";position:absolute;top:0;bottom:0;left:-70%;width:55%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(139,79,216,.14),transparent);
+  animation:sheenSweep 1.1s ease-out .45s 1 both;}}
+[data-testid="stColumn"]:nth-child(2) [data-testid="stMetric"] {{animation-delay:.08s;}}
+[data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"] {{animation-delay:.16s;}}
+[data-testid="stColumn"]:nth-child(4) [data-testid="stMetric"] {{animation-delay:.24s;}}
+[data-testid="stColumn"]:nth-child(2) [data-testid="stMetric"]::before {{animation-delay:.33s;}}
+[data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"]::before {{animation-delay:.41s;}}
+[data-testid="stColumn"]:nth-child(4) [data-testid="stMetric"]::before {{animation-delay:.49s;}}
+[data-testid="stColumn"]:nth-child(2) [data-testid="stMetric"]::after {{animation-delay:.53s;}}
+[data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"]::after {{animation-delay:.61s;}}
+[data-testid="stColumn"]:nth-child(4) [data-testid="stMetric"]::after {{animation-delay:.69s;}}
+
+/* charts wipe up as if bars grow */
+[data-testid="stVegaLiteChart"], [data-testid="stArrowVegaLiteChart"] {{animation:chartWipe .75s .3s cubic-bezier(.25,.8,.3,1) both;}}
+
+/* attention pulse on reorder pill */
+.pill.re {{animation:pillPulse 2.6s ease-in-out 1.2s infinite;}}
+
+/* button press feedback */
+.stApp button:active {{transform:scale(.96);}}
+
+/* tables fade */
+[data-testid="stDataFrame"], [data-testid="stDataframe"] {{animation:riseIn .55s .12s both;}}
+
+@media (prefers-reduced-motion: reduce) {{
+  *, *::before, *::after {{animation:none!important;transition:none!important;}}
+}}
+
+/* dashboard redesign A: rich dark */
+.dhead {{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:2px 0 14px;
+  background:linear-gradient(120deg,#1D0631,#4B1F7E 70%,#6D2DB0);border-radius:16px;padding:14px 20px;
+  box-shadow:0 18px 36px -24px rgba(42,15,77,.55);}}
+.dh-title {{color:#fff;font-size:20px;font-weight:900;}}
+.dh-sub {{color:rgba(255,255,255,.72);font-size:12.5px;font-weight:600;}}
+.dtiles {{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}}
+.dtile {{background:#fff;border:1px solid #E6DCF3;border-radius:16px;padding:14px 18px;position:relative;overflow:hidden;
+  box-shadow:0 14px 28px -20px rgba(58,17,99,.3);}}
+.dtile::before {{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:5px;background:var(--tc);}}
+.dt-num {{font-size:30px;font-weight:900;color:var(--tc);line-height:1.1;}}
+.dt-label {{font-size:12.5px;font-weight:700;color:#71638A;margin-top:2px;}}
+.dt-bar {{height:5px;border-radius:99px;background:var(--tb);margin-top:9px;overflow:hidden;}}
+.dt-bar span {{display:block;height:100%;border-radius:99px;background:var(--tc);}}
+.dvrow {{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;}}
+.dvcard {{border-radius:16px;padding:16px 20px;color:#fff;background:linear-gradient(120deg,#3A1163,#5E2399);
+  box-shadow:0 18px 36px -22px rgba(42,15,77,.55);position:relative;overflow:hidden;}}
+.dvcard.alt {{background:linear-gradient(120deg,#8A4A10,#C97A1F);}}
+.dv-label {{font-size:13px;font-weight:700;color:rgba(255,255,255,.85);}}
+.dv-num {{font-size:26px;font-weight:900;margin-top:3px;}}
+.dv-num span {{font-size:13px;font-weight:700;opacity:.8;}}
+.dv-hint {{font-size:11.5px;color:rgba(255,255,255,.68);margin-top:3px;}}
+@media (max-width:640px) {{.dtiles {{grid-template-columns:repeat(2,1fr);}} .dvrow {{grid-template-columns:1fr;}}}}
 </style>""",
     unsafe_allow_html=True,
 )
+
+st.markdown(
+    """<style>
+/* v3 dashboard-focused motion layer */
+@keyframes bandIn {from {opacity:0; transform:translateY(16px) scale(.985);} to {opacity:1; transform:none;}}
+@keyframes blurIn {from {opacity:0; transform:translateY(8px); filter:blur(5px);} to {opacity:1; transform:none; filter:blur(0);}}
+@keyframes growX {from {width:0;}}
+@keyframes donutIn {from {opacity:0; transform:scale(.55) rotate(-45deg);} to {opacity:1; transform:none;}}
+@keyframes wipeAcross {from {clip-path:inset(0 100% 0 0); opacity:.35;} to {clip-path:inset(0 0 0 0); opacity:1;}}
+@keyframes cardSheen {from {left:-75%;} to {left:130%;}}
+
+.dhead {animation:bandIn .65s .35s cubic-bezier(.2,.7,.3,1) both; overflow:hidden; position:relative;}
+.dhead::after {content:""; position:absolute; top:0; bottom:0; left:-70%; width:55%; pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);
+  animation:cardSheen 1.1s ease-out .9s 1 both;}
+
+.dtile {animation:popIn .55s cubic-bezier(.2,.7,.3,1.2) both;}
+.dtile:nth-child(1) {animation-delay:.55s;} .dtile:nth-child(2) {animation-delay:.65s;}
+.dtile:nth-child(3) {animation-delay:.75s;} .dtile:nth-child(4) {animation-delay:.85s;}
+.dt-num {animation:blurIn .5s both; display:inline-block;}
+.dtile:nth-child(1) .dt-num {animation-delay:.8s;} .dtile:nth-child(2) .dt-num {animation-delay:.9s;}
+.dtile:nth-child(3) .dt-num {animation-delay:1.0s;} .dtile:nth-child(4) .dt-num {animation-delay:1.1s;}
+.dt-bar span {animation:growX .9s cubic-bezier(.25,.8,.3,1) both;}
+.dtile:nth-child(1) .dt-bar span {animation-delay:1.0s;} .dtile:nth-child(2) .dt-bar span {animation-delay:1.1s;}
+.dtile:nth-child(3) .dt-bar span {animation-delay:1.2s;} .dtile:nth-child(4) .dt-bar span {animation-delay:1.3s;}
+
+.dvcard {animation:popIn .6s cubic-bezier(.2,.7,.3,1.15) both;}
+.dvrow .dvcard:nth-child(1) {animation-delay:1.0s;} .dvrow .dvcard:nth-child(2) {animation-delay:1.1s;}
+.dvcard::after {content:""; position:absolute; top:0; bottom:0; left:-70%; width:55%; pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.20),transparent);
+  animation:cardSheen 1.1s ease-out 1.45s 1 both;}
+
+[data-testid="stColumn"]:nth-child(1) [data-testid="stVegaLiteChart"],
+[data-testid="stColumn"]:nth-child(1) [data-testid="stArrowVegaLiteChart"]
+  {animation:donutIn .9s 1.35s cubic-bezier(.2,.7,.3,1.1) both;}
+[data-testid="stColumn"]:nth-child(2) [data-testid="stVegaLiteChart"],
+[data-testid="stColumn"]:nth-child(2) [data-testid="stArrowVegaLiteChart"]
+  {animation:wipeAcross .95s 1.5s cubic-bezier(.25,.8,.3,1) both;}
+</style>""",
+    unsafe_allow_html=True,
+)
+
 
 # Use the checked workbook snapshot. This app does not recalculate Excel formulas.
 data = json.loads((Path(__file__).parent / "2-data.json").read_text(encoding="utf-8"))
@@ -529,39 +664,41 @@ def handle_upload():
 
 def dashboard_view():
     # KPIs and aggregates from the stored workbook snapshot (Analysis!AE5:AG69).
-    st.subheader(t("لوحة متابعة المخزون", "Inventory dashboard"))
-    cols = st.columns(4)
-    for col, value, label in zip(
-        cols,
-        [
-            len(items),
-            sum(i["status"] == "REORDER" for i in items),
-            sum(i["status"] == "OVERSTOCK" for i in items),
-            sum(i["status"] == "OK" for i in items),
-        ],
-        [
-            t("الأصناف", "Items"),
-            t("مراجعة طلب", "Reorder review"),
-            t("رصيد زائد", "Above maximum"),
-            t("داخل الحدود", "Within limits"),
-        ],
-    ):
-        col.metric(label, value)
+    total = len(items)
+    n_re = sum(i["status"] == "REORDER" for i in items)
+    n_ov = sum(i["status"] == "OVERSTOCK" for i in items)
+    n_ok = sum(i["status"] == "OK" for i in items)
     total_order = sum(i["suggested"] * i["price"] for i in items)
     total_excess = sum(max(0, i["stock"] - i["max"]) * i["price"] for i in items)
-    vals = st.columns(2)
-    vals[0].metric(
-        t("قيمة الطلبات المقترحة", "Suggested order value"), f"{total_order:,.0f} EGP"
-    )
-    vals[1].metric(
-        t("قيمة المخزون الزائد", "Excess stock value"), f"{total_excess:,.0f} EGP"
-    )
     status_names = {
         "REORDER": t("مراجعة طلب", "Reorder"),
         "OVERSTOCK": t("رصيد زائد", "Overstock"),
         "OK": t("داخل الحدود", "OK"),
         "CHECK": t("فحص بيانات", "Check data"),
     }
+    cmap = {
+        status_names["REORDER"]: "#D92D20",
+        status_names["OVERSTOCK"]: "#F79009",
+        status_names["OK"]: "#12B76A",
+        status_names["CHECK"]: "#98A2B3",
+    }
+    counts = {}
+    for i in items:
+        key = status_names[i["status"]]
+        counts[key] = counts.get(key, 0) + 1
+    st_label, n_label = t("الحالة", "Status"), t("عدد الأصناف", "Items")
+    cdf = pd.DataFrame({st_label: list(counts.keys()), n_label: list(counts.values())})
+    cdf["c"] = cdf[st_label].map(cmap)
+    sup_label = t("المورد", "Supplier")
+    by_supplier = {}
+    for i in items:
+        if i["status"] == "REORDER":
+            by_supplier[i["supplier"]] = (
+                by_supplier.get(i["supplier"], 0) + i["suggested"] * i["price"]
+            )
+    sdf = pd.DataFrame(
+        {sup_label: list(by_supplier.keys()), "EGP": list(by_supplier.values())}
+    ).sort_values("EGP", ascending=False)
     def light_chart(chart, height=260):
         return (
             chart.properties(height=height)
@@ -577,51 +714,66 @@ def dashboard_view():
                 domainColor="#CDBDE2",
             )
         )
+    sup_title = t("قيمة الطلبات المقترحة حسب المورد", "Suggested order value by supplier")
+    st_title = t("توزيع حالات الأصناف", "Item status breakdown")
 
-    st.write(t("توزيع حالات الأصناف", "Item status breakdown"))
-    counts = {}
-    for i in items:
-        key = status_names[i["status"]]
-        counts[key] = counts.get(key, 0) + 1
-    st_label, n_label = t("الحالة", "Status"), t("عدد الأصناف", "Items")
-    cdf = pd.DataFrame({st_label: list(counts.keys()), n_label: list(counts.values())})
-    bars = (
+    def tile(value, label, color, bg):
+        pct = (value / total * 100) if total else 0
+        return (
+            f'<div class="dtile" style="--tc:{color};--tb:{bg}">'
+            f'<div class="dt-num">{value}</div>'
+            f'<div class="dt-label">{label}</div>'
+            f'<div class="dt-bar"><span style="width:{pct:.0f}%"></span></div>'
+            f"</div>"
+        )
+    st.markdown(
+        '<div class="dhead"><span class="dh-title">'
+        + t("لوحة متابعة المخزون", "Inventory dashboard")
+        + '</span><span class="dh-sub">'
+        + t("نظرة فورية على حالة المخزون من بيانات الملف", "Live snapshot of stock status from workbook data")
+        + "</span></div>"
+        + '<div class="dtiles">'
+        + tile(total, t("إجمالي الأصناف", "Total items"), "#6D2DB0", "#EFE7FA")
+        + tile(n_re, t("مراجعة طلب", "Reorder review"), "#D92D20", "#FDECEA")
+        + tile(n_ov, t("رصيد زائد", "Above maximum"), "#E78607", "#FDF1E0")
+        + tile(n_ok, t("داخل الحدود", "Within limits"), "#0E9F6E", "#E5F7F0")
+        + "</div>"
+        + '<div class="dvrow">'
+        + f'<div class="dvcard"><div class="dv-label">{t("قيمة الطلبات المقترحة", "Suggested order value")}</div><div class="dv-num">{total_order:,.0f} <span>EGP</span></div><div class="dv-hint">{t("لإعادة المخزون للحد الأقصى", "to bring stock back to maximum")}</div></div>'
+        + f'<div class="dvcard alt"><div class="dv-label">{t("قيمة المخزون الزائد", "Excess stock value")}</div><div class="dv-num">{total_excess:,.0f} <span>EGP</span></div><div class="dv-hint">{t("سيولة مجمدة فوق الحد الأقصى", "cash frozen above maximum")}</div></div>'
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    donut = (
         alt.Chart(cdf)
-        .mark_bar(color="#6D2DB0", cornerRadiusTopLeft=8, cornerRadiusTopRight=8)
+        .mark_arc(innerRadius=58, outerRadius=94, cornerRadius=6, padAngle=0.03)
         .encode(
-            x=alt.X(f"{st_label}:N", sort="-y", title=None, axis=alt.Axis(labelAngle=0)),
-            y=alt.Y(f"{n_label}:Q", title=n_label),
+            theta=alt.Theta(f"{n_label}:Q"),
+            color=alt.Color("c:N", scale=None),
+            tooltip=[st_label, n_label],
         )
     )
-    labels = bars.mark_text(dy=-8, color="#3A1163", fontWeight=700, font="Cairo").encode(
-        text=alt.Text(f"{n_label}:Q")
-    )
-    st.altair_chart(light_chart(bars + labels), width="stretch")
-    st.write(
-        t("قيمة الطلبات المقترحة حسب المورد", "Suggested order value by supplier")
-    )
-    by_supplier = {}
-    for i in items:
-        if i["status"] == "REORDER":
-            by_supplier[i["supplier"]] = (
-                by_supplier.get(i["supplier"], 0) + i["suggested"] * i["price"]
-            )
-    sup_label = t("المورد", "Supplier")
-    sdf = pd.DataFrame(
-        {sup_label: list(by_supplier.keys()), "EGP": list(by_supplier.values())}
-    )
-    sbars = (
+    sdf = sdf.assign(lbl=sdf[sup_label].astype(str) + "  ·  " + sdf["EGP"].map(lambda v: f"{v:,.0f}"))
+    supbars = (
         alt.Chart(sdf)
-        .mark_bar(color="#7A45B8", cornerRadiusTopLeft=8, cornerRadiusTopRight=8)
+        .mark_bar(color="#6D2DB0", cornerRadiusEnd=8)
         .encode(
-            x=alt.X(f"{sup_label}:N", sort="-y", title=None, axis=alt.Axis(labelAngle=0)),
-            y=alt.Y("EGP:Q", title=t("قيمة الطلب (EGP)", "Order value (EGP)"), axis=alt.Axis(format="~s")),
+            y=alt.Y(f"{sup_label}:N", sort="-x", title=None, axis=alt.Axis(labels=False, ticks=False, domain=False)),
+            x=alt.X("EGP:Q", title=t("قيمة الطلب (EGP)", "Order value (EGP)"), axis=alt.Axis(format="~s"), scale=alt.Scale(domain=[0, float(sdf["EGP"].max()) * 1.6])),
+            tooltip=[sup_label, alt.Tooltip("EGP:Q", format=",.0f")],
         )
     )
-    slabels = sbars.mark_text(dy=-8, color="#3A1163", fontWeight=700, font="Cairo", fontSize=12).encode(
-        text=alt.Text("EGP:Q", format=",.0f")
+    suptext = supbars.mark_text(align="right", dx=8, color="#3A1163", fontWeight=700, font="Cairo", fontSize=12).encode(
+        text=alt.Text("lbl:N")
     )
-    st.altair_chart(light_chart(sbars + slabels), width="stretch")
+    cc = st.columns(2)
+    with cc[0]:
+        st.write(st_title)
+        st.altair_chart(light_chart(donut, 240), width="stretch")
+    with cc[1]:
+        st.write(sup_title)
+        st.altair_chart(light_chart(supbars + suptext, 240), width="stretch")
 
     st.write(t("ملخص الموردين", "Supplier summary"))
     sup_rows = []
